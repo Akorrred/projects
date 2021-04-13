@@ -1,0 +1,260 @@
+#include <algorithm>
+#include <iostream>
+#include <vector>
+
+using namespace std;
+
+template<typename T>
+class Polynomial {
+private:
+    vector<T> data;
+
+public:
+    void normalize() {
+        while (!data.empty() && data.back() == T(0)) {
+            data.pop_back();
+        }
+    }
+
+    size_t size() const {
+        return data.size();
+    }
+
+    Polynomial() = default;
+
+    Polynomial(const vector<T>& v) : data(v) {
+        normalize();
+    }
+
+    Polynomial(const T& a) {
+        data.push_back(a);
+        normalize();
+    }
+
+    template <typename Iter>
+    Polynomial(Iter it1, Iter it2) : data(it1, it2) {
+        normalize();
+    }
+
+    bool operator == (const Polynomial& other) const {
+        return data == other.data;
+    }
+
+    bool operator != (const Polynomial& other) const {
+        return !(data == other.data);
+    }
+
+    bool operator == (const T& other) const {
+        return *this == Polynomial(other);
+    }
+
+    bool operator != (const T& other) const {
+        return !(*this == other);
+    }
+
+    const Polynomial operator + (const Polynomial& other) const {
+        Polynomial result;
+        size_t m = max(data.size(), other.size());
+        result.data.resize(m);
+        if (data.size() < other.size()) {
+            for (size_t i = 0; i < data.size(); ++i) {
+                result.data[i] = data[i] + other[i];
+            }
+            for (size_t i = data.size(); i < other.size(); ++i) {
+                result.data[i] = other[i];
+            }
+        }
+        else {
+            for (size_t i = 0; i < other.size(); ++i) {
+                result.data[i] = data[i] + other[i];
+            }
+            for (size_t i = other.size(); i < data.size(); ++i) {
+                result.data[i] = data[i];
+            }
+        }
+        result.normalize();
+        return result;
+    }
+
+    Polynomial operator - () const {
+        Polynomial result;
+        result = data;
+        for (size_t i = 0; i < result.data.size(); i++) {
+            result.data[i] = -result.data[i];
+        }
+        return result;
+    }
+
+    const Polynomial operator - (const Polynomial& other) const {
+        Polynomial result;
+        size_t m = max(data.size(), other.size());
+        result.data.resize(m);
+        if (data.size() < other.size()) {
+            for (size_t i = 0; i < data.size(); ++i) {
+                result.data[i] = data[i] - other[i];
+            }
+            for (size_t i = data.size(); i < other.size(); ++i) {
+                result.data[i] = -other[i];
+            }
+        }
+        else {
+            for (size_t i = 0; i < other.size(); ++i) {
+                result.data[i] = data[i] - other[i];
+            }
+            for (size_t i = other.size(); i < data.size(); ++i) {
+                result.data[i] = data[i];
+            }
+        }
+        result.normalize();
+        return result;
+    }
+
+    const Polynomial operator + (const T& other) const {
+        return *this + Polynomial(other);
+    }
+
+    const Polynomial operator - (const T& other) const {
+        return *this - Polynomial(other);
+    }
+
+    Polynomial& operator += (const Polynomial& other) {
+        *this = *this + other;
+        (*this).normalize();
+        return *this;
+    }
+
+    Polynomial& operator -= (Polynomial& other) {
+        *this = *this - other;
+        (*this).normalize();
+        return *this;
+    }
+
+    Polynomial& operator += (const T& other) {
+        *this = *this + other;
+        (*this).normalize();
+        return *this;
+    }
+
+    Polynomial& operator -= (const T& other) {
+        *this = *this - other;
+        (*this).normalize();
+        return *this;
+    }
+
+    const T operator[] (const size_t& i) const {
+        if (i < data.size()) {
+            return data[i];
+        }
+        else {
+            return 0;
+        }
+    }
+
+    int Degree() const {
+        return data.size() - 1;
+    }
+
+    typename vector<T>::const_iterator begin() const {
+        return data.begin();
+    }
+
+    typename vector<T>::const_iterator end() const {
+        return data.end();
+    }
+
+    Polynomial operator * (const Polynomial& other) const {
+        T null = 0;
+        if (data.size() == 0 || other.data.size() == 0) {
+            return Polynomial(null);
+        }
+        Polynomial result;
+        result.data.resize(data.size() + other.data.size() - 1);
+        for (size_t i = 0; i < data.size(); ++i) {
+            for (size_t j = 0; j < other.data.size(); ++j) {
+                result.data[i + j] += data[i] * other.data[j];
+            }
+        }
+        result.normalize();
+        return result;
+    }
+
+    Polynomial& operator *= (const Polynomial& other) {
+        *this = *this * other;
+        (*this).normalize();
+        return *this;
+    }
+
+    T operator() (const T& x) const {
+        T result = 0;
+        T pow = 1;
+        for (size_t i = 0; i < data.size(); ++i) {
+            result += data[i] * pow;
+            pow *= x;
+        }
+        return result;
+    }
+
+    Polynomial operator&(const Polynomial& other) const {
+        if (size() <= 1) {
+            return *this;
+        }
+        Polynomial result;
+        for (size_t i = 0; i < data.size(); ++i) {
+            if (data[i] != T(0)) {
+                Polynomial current = { data[i] };
+                for (size_t j = 1; j < i + 1; ++j) {
+                    current *= other;
+                }
+                result += current;
+            }
+        }
+        return result;
+    }
+};
+
+template<typename T>
+ostream& operator<< (ostream& out, const Polynomial<T>& b) {
+    if (b.Degree() == -1) {
+        out << T(0);
+    }
+    else {
+        for (int i = b.Degree(); i >= 0; --i) {
+            string s = i == 1 ? "x" : "x^" + to_string(i);
+            if (i == b.Degree()) {
+                if (b.Degree() == 0) {
+                    out << b[i];
+                }
+                else if (b[i] == T(1)) {
+                    out << s;
+                }
+                else if (b[i] == T(-1)) {
+                    out << '-' << s;
+                }
+                else {
+                    out << b[i] << '*' << s;
+                }
+            }
+            else if (b[i] == T(0)) {
+                continue;
+            }
+            else if (i == 0) {
+                if (b[i] > T(0))
+                    out << '+';
+                out << b[i];
+            }
+            else if (b[i] == T(1)) {
+                out << '+' << s;
+            }
+            else if (b[i] == T(-1)) {
+                out << '-' << s;
+            }
+            else if (b[i] > T(0)) {
+                out << '+' << b[i] << '*' << s;
+            }
+            else {
+                out << b[i] << '*' << s;
+            }
+        }
+    }
+    return out;
+}
