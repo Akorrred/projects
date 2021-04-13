@@ -1,0 +1,112 @@
+#include <algorithm>
+#include <cstddef>
+#include <utility>
+
+template <typename T>
+class SharedPtr {
+private:
+    T* ptr;
+    size_t* links;
+
+    void addlink() {
+        if (ptr != nullptr) {
+            if (links == nullptr) {
+                links = new size_t(0);
+            }
+            ++(*links);
+        }
+    }
+
+    void removelink() {
+        if (ptr != nullptr) {
+            --(*links);
+            if (*links == 0) {
+                delete ptr;
+                delete links;
+            }
+        }
+    }
+
+public:
+    SharedPtr() : ptr(nullptr), links(nullptr) {}
+
+    SharedPtr(T* new_ptr) : ptr(new_ptr), links(nullptr) {
+        addlink();
+    }
+
+    SharedPtr(const SharedPtr& new_ptr) : ptr(new_ptr.ptr), links(new_ptr.links) {
+        addlink();
+    }
+
+
+    SharedPtr(SharedPtr&& new_ptr) :
+        ptr(new_ptr.ptr), links(new_ptr.links) {
+        new_ptr.ptr = nullptr;
+        new_ptr.links = nullptr;
+    }
+
+    SharedPtr& operator=(T* other) {
+        if (ptr != other) {
+            removelink();
+            ptr = other;
+            links = nullptr;
+            addlink();
+        }
+        return *this;
+    }
+
+    SharedPtr& operator=(const SharedPtr& other) {
+        if (ptr != other.ptr) {
+            removelink();
+            ptr = other.ptr;
+            links = other.links;
+            addlink();
+        }
+        return *this;
+    }
+
+
+    SharedPtr& operator=(SharedPtr&& other) {
+        if (ptr != other.ptr) {
+            removelink();
+            ptr = other.ptr;
+            links = other.links;
+            other.ptr = nullptr;
+            other.links = nullptr;
+        }
+        return *this;
+    }
+
+    ~SharedPtr() {
+        removelink();
+    }
+
+    T& operator*() {
+        return *ptr;
+    }
+
+    const T& operator*() const {
+        return *ptr;
+    }
+
+    const T* operator->() const noexcept {
+        return ptr;
+    }
+
+    void reset(T* other) noexcept {
+        *this = other;
+    }
+
+    void swap(SharedPtr& other) noexcept {
+        std::swap(ptr, other.ptr);
+        std::swap(links, other.links);
+    }
+
+    T* get() const noexcept {
+        return ptr;
+    }
+
+    explicit operator bool() const noexcept {
+        return !(links == nullptr);
+    }
+};
