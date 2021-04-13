@@ -1,0 +1,90 @@
+#include <algorithm>
+#include <cstddef>
+#include <memory>
+#include <tuple>
+
+template <typename T, typename Deleter = std::default_delete<T>>
+class UniquePtr {
+private:
+    std::tuple<T*, Deleter> tuple_;
+
+    Deleter& GetDeleter() {
+        return std::get<1>(tuple_);
+    }
+
+    T*& GetPtr() {
+        return std::get<0>(tuple_);
+    }
+
+    Deleter GetDeleter() const {
+        return std::get<1>(tuple_);
+    }
+
+    T* GetPtr() const {
+        return std::get<0>(tuple_);
+    }
+
+public:
+    UniquePtr(T* new_ptr = nullptr, const Deleter& deleter = Deleter()) noexcept :
+        tuple_(std::make_tuple(new_ptr, deleter)) {}
+
+    UniquePtr(UniquePtr&& new_ptr) noexcept : tuple_(new_ptr.tuple_) {
+        new_ptr.GetPtr() = nullptr;
+    }
+
+    UniquePtr& operator=(std::nullptr_t) {
+        GetDeleter()(GetPtr());
+        GetPtr() = nullptr;
+        return *this;
+    }
+
+    UniquePtr& operator=(UniquePtr&& other_ptr) {
+        GetDeleter()(GetPtr());
+        tuple_ = other_ptr.tuple_;
+        other_ptr.GetPtr() = nullptr;
+        return *this;
+    }
+
+    ~UniquePtr() {
+        GetDeleter()(GetPtr());
+    }
+
+    const T& operator*() const {
+        return *GetPtr();
+    }
+
+    T* operator->() const noexcept {
+        return GetPtr();
+    }
+
+    T* release() noexcept {
+        T* temp_ptr = GetPtr();
+        GetPtr() = nullptr;
+        return temp_ptr;
+    }
+
+    void reset(T* other_ptr) noexcept {
+        GetDeleter()(GetPtr());
+        GetPtr() = other_ptr;
+    }
+
+    void swap(UniquePtr& other_ptr) noexcept {
+        std::swap(tuple_, other_ptr.tuple_);
+    }
+
+    T* get() const noexcept {
+        return GetPtr();
+    }
+
+    explicit operator bool() const noexcept {
+        return !(GetPtr() == nullptr);
+    }
+
+    Deleter& get_deleter() {
+        return GetDeleter();
+    }
+
+    const Deleter& get_deleter() const {
+        return GetDeleter();
+    }
+};
