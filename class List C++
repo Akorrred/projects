@@ -1,0 +1,119 @@
+#include <cstddef>
+
+class List {
+private:
+    struct Node {
+        int value;
+        Node* prev;
+        Node* next;
+        Node(int value, Node* prev, Node* next) : value(value), prev(prev), next(next) {}
+    } *head, * tail;
+    size_t sz;
+
+public:
+    List() : head(nullptr), tail(nullptr), sz(0) {}
+
+    List& operator = (const List& other) {
+        while (sz > 0) {
+            pop_back();
+        }
+        for (auto i : other) {
+            push_back(i);
+        }
+        return *this;
+    }
+
+    ~List() {
+        while (sz > 0) {
+            pop_back();
+        }
+    }
+
+    void push_back(int elem) {
+        if (sz == 0) {
+            head = tail = new Node(elem, nullptr, nullptr);
+        }
+        else {
+            tail = tail->next = new Node(elem, tail, nullptr);
+        }
+        ++sz;
+    }
+
+    void push_front(int elem) {
+        if (sz == 0) {
+            head = tail = new Node(elem, nullptr, nullptr);
+        }
+        else {
+            head = head->prev = new Node(elem, nullptr, head);
+        }
+        ++sz;
+    }
+
+    void pop_front() {
+        Node* temp = head;
+        head = head->next;
+        if (sz == 1) {
+            tail = nullptr;
+        }
+        else {
+            head->prev = nullptr;
+        }
+        delete temp;
+        --sz;
+    }
+
+    void pop_back() {
+        Node* temp = tail;
+        tail = tail->prev;
+        if (sz == 1) {
+            head = nullptr;
+        }
+        else {
+            tail->next = nullptr;
+        }
+        delete temp;
+        --sz;
+    }
+
+    size_t size() const {
+        return sz;
+    }
+
+    class ConstIterator {
+        const List* l;
+        Node* n;
+
+    public:
+        ConstIterator(const List* value, Node* i) : l(value), n(i) {}
+
+        ConstIterator& operator++ () {
+            n = n->next;
+            return *this;
+        }
+
+        ConstIterator& operator-- () {
+            n = (n != nullptr ? n->prev : l->tail);
+            return *this;
+        }
+
+        int operator*() const {
+            return n->value;
+        }
+
+        bool operator == (const ConstIterator& other) const {
+            return (n == other.n && l == other.l);
+        }
+
+        bool operator != (const ConstIterator& other) const {
+            return (n != other.n || l != other.l);
+        }
+    };
+
+    ConstIterator begin() const {
+        return ConstIterator(this, head);
+    }
+
+    ConstIterator end() const {
+        return ConstIterator(this, tail->next);
+    }
+};
