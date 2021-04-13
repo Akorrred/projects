@@ -1,0 +1,216 @@
+#include <cassert>
+#include <vector>
+
+using namespace std;
+
+template <typename T>
+class Matrix {
+private:
+    vector<vector<T>> data;
+    size_t rows, columns;
+
+public:
+    using Row = vector<T>;
+    Matrix(const vector<vector<T>>& data) :
+        data(data), rows(data.size()), columns(data[0].size()) {}
+
+    pair<size_t, size_t> size() const {
+        return { data.size(), data[0].size() };
+    }
+
+    template <class U>
+    friend ostream& operator << (ostream& out, const Matrix<U>& m);
+
+    Row& operator[] (size_t i) {
+        return data[i];
+    }
+
+    const Row& operator[] (size_t i) const {
+        return data[i];
+    }
+
+    Matrix<T>& operator += (const Matrix<T>& other) {
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = 0; j < columns; ++j) {
+                data[i][j] += other[i][j];
+            }
+        }
+        return *this;
+    }
+
+    template <typename U>
+    Matrix& operator *= (const U& scalar) {
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = 0; j < columns; ++j) {
+                data[i][j] *= scalar;
+            }
+        }
+        return *this;
+    }
+
+    template <class U>
+    Matrix<T> operator * (const U& scalar) const {
+        Matrix result(data);
+        for (size_t i = 0; i < data.size(); ++i) {
+            for (size_t j = 0; j < data[0].size(); ++j) {
+                result[i][j] *= scalar;
+            }
+        }
+        return result;
+    }
+
+    Matrix<T>& transpose() {
+        vector<vector<T>> copy(columns, vector<T>(rows));
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = 0; j < columns; ++j) {
+                copy[j][i] = (*this).data[i][j];
+            }
+        }
+        (*this).data = copy;
+        auto tmp = columns;
+        columns = rows;
+        rows = tmp;
+        return (*this);
+    }
+
+    Matrix<T> transposed() const {
+        Matrix<T> copy = (*this);
+        copy.transpose();
+        return copy;
+    }
+
+    Matrix& operator *= (const Matrix& other) {
+        assert(columns == other.rows);
+        std::vector<std::vector<T>> result(rows, std::vector<T>(other.columns));
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = 0; j < other.columns; ++j) {
+                for (size_t k = 0; k < other.rows; ++k) {
+                    result[i][j] += data[i][k] * other[k][j];
+                }
+            }
+        }
+        (*this).data = result;
+        columns = other.columns;
+        return (*this);
+    }
+
+
+    Matrix operator * (const Matrix& other) {
+        assert(columns == other.rows);
+        std::vector<std::vector<T>> copy(rows, std::vector<T>(other.columns));
+        Matrix<T> result(copy);
+        for (size_t i = 0; i < rows; ++i) {
+            for (size_t j = 0; j < other.columns; ++j) {
+                for (size_t k = 0; k < other.rows; ++k) {
+                    result[i][j] += data[i][k] * other[k][j];
+                }
+            }
+        }
+        return result;
+    }
+
+    template <typename P>
+    class Iterator {
+    private:
+        vector<vector<P>>& data;
+        size_t i;
+
+    public:
+        Iterator(vector<vector<P>>& data, size_t i) : data(data), i(i) {}
+
+        bool operator ==(const Iterator& other) const {
+            return i == other.i;
+        }
+
+        bool operator !=(const Iterator& other) const {
+            return i != other.i;
+        }
+
+        T operator *() {
+            return data[i / data[0].size()][i % data[0].size()];
+        }
+
+        Iterator& operator ++() {
+            ++i;
+            return *this;
+        }
+
+        Iterator operator ++(int) {
+            Iterator t(this);
+            ++i;
+            return *t;
+        }
+    };
+
+    Iterator<T> begin() {
+        return Iterator<T>(data, 0);
+    }
+
+    Iterator<T> end() {
+        return Iterator<T>(data, data.size() * data[0].size());
+    }
+
+    template <typename S>
+    class ConstIterator {
+    private:
+        const vector<vector<S>>& data;
+        size_t i;
+
+    public:
+        ConstIterator(const vector<vector<S>>& data, size_t i) : data(data), i(i) {}
+
+        bool operator ==(const ConstIterator& other) const {
+            return i == other.i;
+        }
+
+        bool operator !=(const ConstIterator& other) const {
+            return i != other.i;
+        }
+
+        T operator *() const {
+            return data[i / data[0].size()][i % data[0].size()];
+        }
+
+        ConstIterator& operator ++() {
+            ++i;
+            return *this;
+        }
+
+        ConstIterator operator ++(int) {
+            ConstIterator t(this);
+            ++i;
+            return *t;
+        }
+    };
+
+    ConstIterator<T> begin() const {
+        return ConstIterator<T>(data, 0);
+    }
+
+    ConstIterator<T> end() const {
+        return ConstIterator<T>(data, data.size() * data[0].size());
+    }
+};
+
+template <class U>
+ostream& operator << (ostream& out, const Matrix<U>& m) {
+    for (size_t i = 0; i < m.rows - 1; i++) {
+        for (size_t j = 0; j < m.columns - 1; j++) {
+            out << m.data[i][j] << "\t";
+        }
+        out << m.data[i][m.columns - 1];
+        out << "\n";
+    }
+    for (size_t j = 0; j < m.columns - 1; j++) {
+        out << m.data[m.rows - 1][j] << "\t";
+    }
+    out << m.data[m.rows - 1][m.columns - 1];
+    return out;
+}
+
+template <typename T>
+Matrix<T> operator + (const Matrix<T>& A, const Matrix<T>& B) {
+    Matrix<T> result(A);
+    result += B;
+    return result;
+}
